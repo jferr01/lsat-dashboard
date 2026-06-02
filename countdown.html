@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LSAT Countdown</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #f9f9f9;
+    --surface:  #ffffff;
+    --surface2: #f2f2f2;
+    --border:   rgba(0,0,0,0.08);
+    --border2:  rgba(0,0,0,0.15);
+    --accent:   #1a1a1a;
+    --text:     #1a1a1a;
+    --text2:    #555555;
+    --text3:    #999999;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:       #111111;
+      --surface:  #1c1c1c;
+      --surface2: #252525;
+      --border:   rgba(255,255,255,0.07);
+      --border2:  rgba(255,255,255,0.13);
+      --accent:   #e8e8e8;
+      --text:     #e8e8e8;
+      --text2:    #aaaaaa;
+      --text3:    #666666;
+    }
+  }
+
+  body {
+    font-family: 'Georgia', serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+  }
+
+  .widget { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 1rem; }
+
+  .display-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border2);
+    border-radius: 16px;
+    padding: 1.75rem 1.5rem 1.5rem;
+    text-align: center;
+  }
+
+  .event-title {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text3);
+    font-family: 'Courier New', monospace;
+    margin-bottom: 0.5rem;
+  }
+
+  .big-number {
+    font-size: 88px;
+    font-weight: normal;
+    color: var(--text);
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+
+  .days-sublabel {
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-family: 'Courier New', monospace;
+    margin-top: 6px;
+  }
+
+  .units-row {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    align-items: flex-start;
+  }
+
+  .unit-block { text-align: center; min-width: 52px; }
+
+  .unit-number {
+    font-size: 28px;
+    font-weight: normal;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  .unit-label {
+    font-size: 9px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-family: 'Courier New', monospace;
+    margin-top: 4px;
+  }
+
+  .unit-sep { font-size: 24px; color: var(--border2); line-height: 1.1; padding-top: 2px; }
+
+  .target-date-label {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'Courier New', monospace;
+    margin-top: 1rem;
+    letter-spacing: 0.04em;
+  }
+
+  .progress-section { margin-top: 1rem; }
+
+  .progress-bar-bg {
+    background: var(--surface2);
+    border-radius: 99px;
+    height: 4px;
+    overflow: hidden;
+    border: 0.5px solid var(--border);
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: var(--text);
+    transition: width 0.6s ease;
+  }
+
+  .progress-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+    font-size: 10px;
+    color: var(--text3);
+    font-family: 'Courier New', monospace;
+  }
+
+  .phase-pill {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 99px;
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 10px;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.07em;
+    margin-top: 1rem;
+    border: 0.5px solid var(--border2);
+  }
+
+  .settings-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border2);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .settings-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.25rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  .settings-toggle:hover { background: var(--surface2); }
+  .settings-toggle .chevron { font-size: 14px; transition: transform 0.2s; display: inline-block; }
+  .settings-toggle.open .chevron { transform: rotate(180deg); }
+
+  .settings-body { display: none; padding: 0 1.25rem 1.25rem; border-top: 0.5px solid var(--border); }
+  .settings-body.open { display: block; }
+
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 0;
+    border-bottom: 0.5px solid var(--border);
+    gap: 12px;
+  }
+
+  .setting-row:last-child { border-bottom: none; }
+  .setting-row.col { flex-direction: column; align-items: flex-start; gap: 8px; }
+
+  .setting-label { font-size: 12px; color: var(--text2); font-family: 'Courier New', monospace; flex-shrink: 0; }
+  .setting-sub { font-size: 10px; color: var(--text3); font-family: 'Courier New', monospace; margin-top: 2px; }
+
+  input[type="text"], input[type="date"] {
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+    padding: 5px 9px;
+    border-radius: 7px;
+    border: 0.5px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text);
+    outline: none;
+    min-width: 0;
+    width: 100%;
+  }
+
+  input[type="text"]:focus, input[type="date"]:focus { border-color: var(--text); }
+  .input-fixed { max-width: 180px; width: auto; }
+
+  .toggle-wrap { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+
+  .toggle-track {
+    position: absolute; inset: 0;
+    border-radius: 99px;
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .toggle input:checked + .toggle-track { background: var(--text); border-color: var(--text); }
+
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--text3);
+    top: 2px; left: 2px;
+    transition: transform 0.2s, background 0.2s;
+  }
+
+  .toggle input:checked + .toggle-track::after { transform: translateX(16px); background: var(--bg); }
+
+  .units-toggles { display: flex; gap: 14px; flex-wrap: wrap; }
+
+  .phases-editor { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+  .phase-edit-row { display: flex; align-items: center; gap: 6px; }
+
+  .phase-radio {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border2);
+    flex-shrink: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    transition: all 0.15s;
+  }
+
+  .phase-radio.active { background: var(--text); border-color: var(--text); }
+
+  .phase-radio.active::after {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--bg);
+  }
+
+  .phase-edit-row input[type="text"] { flex: 1; font-size: 11px; padding: 5px 8px; }
+
+  .phase-del-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text3); font-size: 13px; padding: 3px;
+    flex-shrink: 0; line-height: 1; border-radius: 4px;
+    transition: color 0.15s;
+  }
+
+  .phase-del-btn:hover { color: var(--text); }
+
+  .add-phase-btn {
+    font-size: 11px;
+    font-family: 'Courier New', monospace;
+    color: var(--text2);
+    background: var(--surface2);
+    border: 0.5px dashed var(--border2);
+    border-radius: 7px;
+    padding: 5px 10px;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    transition: background 0.15s;
+  }
+
+  .add-phase-btn:hover { background: var(--border2); }
+
+  .save-btn {
+    width: 100%; margin-top: 1rem; padding: 9px;
+    border-radius: 9px; border: none;
+    background: var(--text); color: var(--bg);
+    font-size: 11px; font-family: 'Courier New', monospace;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+
+  .save-btn:hover { opacity: 0.8; }
+</style>
+</head>
+<body>
+<div class="widget">
+
+  <div class="display-card">
+    <div class="event-title" id="disp-title">LSAT</div>
+    <div class="big-number" id="disp-days">--</div>
+    <div class="days-sublabel" id="days-sublabel">days remaining</div>
+
+    <div class="units-row" id="units-row" style="display:none;">
+      <div class="unit-block" id="b-hours"><div class="unit-number" id="u-hours">--</div><div class="unit-label">hours</div></div>
+      <div class="unit-sep" id="sep-hm">·</div>
+      <div class="unit-block" id="b-mins"><div class="unit-number" id="u-mins">--</div><div class="unit-label">mins</div></div>
+      <div class="unit-sep" id="sep-ms" style="display:none;">·</div>
+      <div class="unit-block" id="b-secs" style="display:none;"><div class="unit-number" id="u-secs">--</div><div class="unit-label">secs</div></div>
+    </div>
+
+    <div class="target-date-label" id="disp-date-label">Friday, August 7, 2026</div>
+
+    <div class="progress-section" id="progress-section">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-fill" style="width:0%"></div></div>
+      <div class="progress-meta">
+        <span id="prog-start-lbl">Mar 30</span>
+        <span id="prog-pct-lbl">0%</span>
+        <span id="prog-end-lbl">Aug 7</span>
+      </div>
+    </div>
+
+    <div id="phase-wrap"><div class="phase-pill" id="phase-pill">Drilling phase</div></div>
+  </div>
+
+  <div class="settings-card">
+    <button class="settings-toggle" id="settings-btn" onclick="toggleSettings()">
+      <span>⚙ Customize</span>
+      <span class="chevron">▾</span>
+    </button>
+    <div class="settings-body" id="settings-body">
+
+      <div class="setting-row">
+        <div class="setting-label">Event name</div>
+        <input type="text" id="s-title" value="LSAT" maxlength="30" class="input-fixed" />
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-label">Target date</div>
+        <input type="date" id="s-date" value="2026-08-07" class="input-fixed" />
+      </div>
+
+      <div class="setting-row">
+        <div><div class="setting-label">Start date</div><div class="setting-sub">for progress bar</div></div>
+        <input type="date" id="s-start" value="2026-03-30" class="input-fixed" />
+      </div>
+
+      <div class="setting-row col">
+        <div class="setting-label">Show units</div>
+        <div class="units-toggles">
+          <label class="toggle-wrap"><span class="setting-sub">Days</span>
+            <label class="toggle"><input type="checkbox" id="t-days" checked onchange="applySettings()"><span class="toggle-track"></span></label>
+          </label>
+          <label class="toggle-wrap"><span class="setting-sub">Hours</span>
+            <label class="toggle"><input type="checkbox" id="t-hours" onchange="applySettings()"><span class="toggle-track"></span></label>
+          </label>
+          <label class="toggle-wrap"><span class="setting-sub">Mins</span>
+            <label class="toggle"><input type="checkbox" id="t-mins" onchange="applySettings()"><span class="toggle-track"></span></label>
+          </label>
+          <label class="toggle-wrap"><span class="setting-sub">Secs</span>
+            <label class="toggle"><input type="checkbox" id="t-secs" onchange="applySettings()"><span class="toggle-track"></span></label>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-label">Progress bar</div>
+        <label class="toggle"><input type="checkbox" id="t-progress" checked onchange="applySettings()"><span class="toggle-track"></span></label>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-label">Phase label</div>
+        <label class="toggle"><input type="checkbox" id="t-phase" checked onchange="applySettings()"><span class="toggle-track"></span></label>
+      </div>
+
+      <div class="setting-row col" id="phase-editor-row">
+        <div><div class="setting-label">Phases</div><div class="setting-sub">Edit names · click circle to set active</div></div>
+        <div class="phases-editor" id="phases-editor"></div>
+        <button class="add-phase-btn" onclick="addPhase()">+ Add phase</button>
+      </div>
+
+      <button class="save-btn" onclick="applySettings()">Apply</button>
+    </div>
+  </div>
+
+</div>
+<script>
+function loadCfg(){ try{ return JSON.parse(localStorage.getItem('lsat_cd_cfg4')||'null'); }catch(e){ return null; } }
+function saveCfg(){ try{ localStorage.setItem('lsat_cd_cfg4', JSON.stringify(cfg)); }catch(e){} }
+function pad(n){ return String(n).padStart(2,'0'); }
+function fmtDate(str){ if(!str) return ''; const d=new Date(str+'T12:00:00'); return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}); }
+function fmtShort(str){ if(!str) return ''; const d=new Date(str+'T12:00:00'); return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+
+let cfg = loadCfg() || {
+  title:'LSAT', targetDate:'2026-08-07', startDate:'2026-03-30',
+  showDays:true, showHours:false, showMins:false, showSecs:false,
+  showProgress:true, showPhase:true,
+  phases:['Foundations','Drilling phase','Timed sections','Full practice tests','Taper week','Test day'],
+  activePhase:'Drilling phase',
+};
+
+let tickInterval = null;
+
+function tick(){
+  const now=new Date(), target=new Date(cfg.targetDate+'T08:00:00'), diff=Math.max(0,target-now);
+  const daysEl=document.getElementById('disp-days'), subEl=document.getElementById('days-sublabel');
+  if(cfg.showDays){
+    const days=Math.ceil(diff/86400000);
+    daysEl.style.display=subEl.style.display='';
+    daysEl.textContent=days; subEl.textContent=days===1?'day remaining':'days remaining';
+  } else { daysEl.style.display=subEl.style.display='none'; }
+  const showSub=cfg.showHours||cfg.showMins||cfg.showSecs;
+  document.getElementById('units-row').style.display=showSub?'flex':'none';
+  if(showSub){
+    const h=Math.floor((diff%86400000)/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+    document.getElementById('b-hours').style.display=cfg.showHours?'':'none';
+    document.getElementById('sep-hm').style.display=(cfg.showHours&&cfg.showMins)?'':'none';
+    document.getElementById('b-mins').style.display=cfg.showMins?'':'none';
+    document.getElementById('sep-ms').style.display=(cfg.showMins&&cfg.showSecs)?'':'none';
+    document.getElementById('b-secs').style.display=cfg.showSecs?'':'none';
+    document.getElementById('u-hours').textContent=pad(h);
+    document.getElementById('u-mins').textContent=pad(m);
+    document.getElementById('u-secs').textContent=pad(s);
+  }
+  if(cfg.showProgress){
+    const start=new Date(cfg.startDate+'T00:00:00'),total=new Date(cfg.targetDate+'T08:00:00')-start;
+    const pct=Math.min(100,Math.max(0,Math.round(((now-start)/total)*100)));
+    document.getElementById('prog-fill').style.width=pct+'%';
+    document.getElementById('prog-pct-lbl').textContent=pct+'%';
+    document.getElementById('prog-start-lbl').textContent=fmtShort(cfg.startDate);
+    document.getElementById('prog-end-lbl').textContent=fmtShort(cfg.targetDate);
+    document.getElementById('progress-section').style.display='';
+  } else { document.getElementById('progress-section').style.display='none'; }
+  document.getElementById('phase-wrap').style.display=cfg.showPhase?'':'none';
+  document.getElementById('phase-pill').textContent=cfg.activePhase||'—';
+}
+
+function renderPhaseEditor(){
+  const editor=document.getElementById('phases-editor');
+  editor.innerHTML='';
+  cfg.phases.forEach((p,i)=>{
+    const row=document.createElement('div');
+    row.className='phase-edit-row';
+    const isActive=cfg.activePhase===p;
+    row.innerHTML=`
+      <div class="phase-radio ${isActive?'active':''}" onclick="setActivePhase(${i})"></div>
+      <input type="text" value="${p}" oninput="renamePhase(${i},this.value)" placeholder="Phase name..." />
+      <button class="phase-del-btn" onclick="deletePhase(${i})">✕</button>
+    `;
+    editor.appendChild(row);
+  });
+}
+
+function setActivePhase(i){ cfg.activePhase=cfg.phases[i]; document.getElementById('phase-pill').textContent=cfg.activePhase; saveCfg(); renderPhaseEditor(); }
+function renamePhase(i,val){ const was=cfg.activePhase===cfg.phases[i]; cfg.phases[i]=val; if(was){ cfg.activePhase=val; document.getElementById('phase-pill').textContent=val; } saveCfg(); }
+function deletePhase(i){ if(cfg.phases.length<=1) return; const was=cfg.activePhase===cfg.phases[i]; cfg.phases.splice(i,1); if(was){ cfg.activePhase=cfg.phases[0]||''; document.getElementById('phase-pill').textContent=cfg.activePhase; } saveCfg(); renderPhaseEditor(); }
+function addPhase(){ cfg.phases.push('New phase'); saveCfg(); renderPhaseEditor(); const inputs=document.querySelectorAll('.phase-edit-row input'); if(inputs.length){ const last=inputs[inputs.length-1]; last.select(); last.focus(); } }
+
+function applySettings(){
+  cfg.title=document.getElementById('s-title').value.trim()||'Event';
+  cfg.targetDate=document.getElementById('s-date').value;
+  cfg.startDate=document.getElementById('s-start').value;
+  cfg.showDays=document.getElementById('t-days').checked;
+  cfg.showHours=document.getElementById('t-hours').checked;
+  cfg.showMins=document.getElementById('t-mins').checked;
+  cfg.showSecs=document.getElementById('t-secs').checked;
+  cfg.showProgress=document.getElementById('t-progress').checked;
+  cfg.showPhase=document.getElementById('t-phase').checked;
+  document.getElementById('phase-editor-row').style.display=cfg.showPhase?'':'none';
+  document.getElementById('disp-title').textContent=cfg.title;
+  document.getElementById('disp-date-label').textContent=fmtDate(cfg.targetDate);
+  saveCfg(); clearInterval(tickInterval); tick();
+  tickInterval=setInterval(tick,cfg.showSecs?1000:60000);
+}
+
+function toggleSettings(){
+  const btn=document.getElementById('settings-btn'),body=document.getElementById('settings-body');
+  const open=body.classList.toggle('open'); btn.classList.toggle('open',open);
+}
+
+function init(){
+  document.getElementById('s-title').value=cfg.title;
+  document.getElementById('s-date').value=cfg.targetDate;
+  document.getElementById('s-start').value=cfg.startDate;
+  document.getElementById('t-days').checked=cfg.showDays;
+  document.getElementById('t-hours').checked=cfg.showHours;
+  document.getElementById('t-mins').checked=cfg.showMins;
+  document.getElementById('t-secs').checked=cfg.showSecs;
+  document.getElementById('t-progress').checked=cfg.showProgress;
+  document.getElementById('t-phase').checked=cfg.showPhase;
+  document.getElementById('phase-editor-row').style.display=cfg.showPhase?'':'none';
+  document.getElementById('disp-title').textContent=cfg.title;
+  document.getElementById('disp-date-label').textContent=fmtDate(cfg.targetDate);
+  renderPhaseEditor(); tick();
+  tickInterval=setInterval(tick,cfg.showSecs?1000:60000);
+}
+init();
+</script>
+</body>
+</html>
